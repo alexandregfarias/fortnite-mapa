@@ -1,5 +1,3 @@
-SE DER MERDA:
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -95,11 +93,18 @@ SE DER MERDA:
     }
 
     // Quando clicar no mapa para marcar
-    mapa.addEventListener('click', (e) => {
+    mapa.addEventListener('click', async (e) => {
       if (e.target !== img) return;
-	
+
       const nome = document.getElementById('nome').value.trim();
       if (!nome) return alert("Digite seu nome antes!");
+
+      // Verificar se já existe uma marcação para este nome
+      const snapshot = await firebase.database().ref('marcadores/' + nome).get();
+      if (snapshot.exists()) {
+        alert('Você já tem uma marcação no mapa. Remova ela para criar uma nova.');
+        return;
+      }
 
       const rect = img.getBoundingClientRect();
       const x = e.clientX - rect.left;
