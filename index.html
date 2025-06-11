@@ -11,8 +11,8 @@
       height: 10px;
       background: red;
       border-radius: 50%;
-      cursor: pointer; /* para indicar que pode clicar */
-      pointer-events: auto; /* permitir clique */
+      cursor: pointer;
+      pointer-events: auto;
     }
     .rotulo {
       position: absolute;
@@ -26,6 +26,9 @@
       pointer-events: none;
     }
   </style>
+  <!-- Firebase SDK compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <h2>Escolha onde vai cair no mapa</h2>
@@ -35,23 +38,29 @@
   </div>
 
   <script>
+    // Configuração do Firebase (coloque a sua config)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZ7Is6PrTLYvkld2rRgcUpuLiG1yXOuyU",
+      authDomain: "liga-mister-drop-mark.firebaseapp.com",
+      databaseURL: "https://liga-mister-drop-mark-default-rtdb.firebaseio.com",
+      projectId: "liga-mister-drop-mark",
+      storageBucket: "liga-mister-drop-mark.firebasestorage.app",
+      messagingSenderId: "734895466892",
+      appId: "1:734895466892:web:607cac4c40e4f114404ea9"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
     const mapa = document.getElementById('mapa');
     const img = document.getElementById('imgMapa');
 
-    mapa.addEventListener('click', (e) => {
-      // Só marca se clicou na imagem, não em marcador
-      if (e.target !== img) return;
-
-      const nome = document.getElementById('nome').value.trim();
-      if (!nome) return alert("Digite seu nome antes!");
-
+    // Função para criar marcador e rótulo no DOM
+    function criarMarcador(nome, x, y) {
       // Remover marcações antigas do jogador
       const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
       antigos.forEach(el => el.remove());
-
-      const rect = img.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
 
       // Criar marcador (bolinha vermelha)
       const marcador = document.createElement('div');
@@ -68,20 +77,59 @@
       rotulo.textContent = nome;
       rotulo.setAttribute('data-nome', nome);
 
-      // Ao clicar no marcador, remove ele e o rótulo
+      // Ao clicar no marcador, remove ele e o rótulo e apaga no Firebase
       marcador.addEventListener('click', (event) => {
-        event.stopPropagation(); // evita que o clique no mapa dispare novamente
+        event.stopPropagation(); 
         if (confirm(`Quer remover sua marcação, ${nome}?`)) {
           marcador.remove();
           rotulo.remove();
+          // Apagar do Firebase
+          firebase.database().ref('marcadores/' + nome).remove();
         }
       });
 
       mapa.appendChild(marcador);
       mapa.appendChild(rotulo);
+    }
+
+    // Quando clicar no mapa para marcar
+    mapa.addEventListener('click', (e) => {
+      if (e.target !== img) return;
+
+      const nome = document.getElementById('nome').value.trim();
+      if (!nome) return alert("Digite seu nome antes!");
+
+      const rect = img.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Criar marcador localmente
+      criarMarcador(nome, x, y);
+
+      // Salvar no Firebase
+      firebase.database().ref('marcadores/' + nome).set({
+        x: x,
+        y: y
+      });
 
       console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
     });
+
+    // Ao carregar a página, ler as marcações do Firebase e mostrar no mapa
+    firebase.database().ref('marcadores').on('value', (snapshot) => {
+      const dados = snapshot.val();
+      if (!dados) return;
+
+      // Limpar todas marcações atuais no DOM
+      const marcadoresAtuais = mapa.querySelectorAll('.marcador, .rotulo');
+      marcadoresAtuais.forEach(el => el.remove());
+
+      // Criar marcadores para todos os dados salvos
+      Object.entries(dados).forEach(([nome, pos]) => {
+        criarMarcador(nome, pos.x, pos.y);
+      });
+    });
+
   </script>
 </body>
 </html>
