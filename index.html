@@ -77,17 +77,10 @@
       marcador.addEventListener('click', (event) => {
         event.stopPropagation();
         const nomeMarcacaoSalva = localStorage.getItem('nomeMarcacao');
-if (nomeMarcacaoSalva && nomeMarcacaoSalva !== nome) {
-  const snapshotSalva = await firebase.database().ref('marcadores/' + nomeMarcacaoSalva).get();
-  
-  if (!snapshotSalva.exists()) {
-    // Marca antiga não existe mais no Firebase, limpar localStorage
-    localStorage.removeItem('nomeMarcacao');
-  } else {
-    alert('Você já fez uma marcação com outro nome. Para criar uma nova, apague a marcação atual.');
-    return;
-  }
-}
+        if (nomeMarcacaoSalva !== nome) {
+          alert('Você só pode remover sua própria marcação!');
+          return;
+        }
         if (confirm(`Quer remover sua marcação, ${nome}?`)) {
           marcador.remove();
           rotulo.remove();
