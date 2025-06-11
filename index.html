@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mapa de Quedas - Fortnite</title>
+  <style>
+    body { text-align: center; font-family: Arial; }
+    #mapa { position: relative; display: inline-block; }
+    .marcador {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      cursor: pointer; /* para indicar que pode clicar */
+      pointer-events: auto; /* permitir clique */
+    }
+    .rotulo {
+      position: absolute;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-size: 12px;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Escolha onde vai cair no mapa</h2>
+  <p>Seu nome: <input type="text" id="nome" /></p>
+  <div id="mapa">
+    <img src="mapa-fortnite.jpg" id="imgMapa" width="800">
+  </div>
+
+  <script>
+    const mapa = document.getElementById('mapa');
+    const img = document.getElementById('imgMapa');
+
+    mapa.addEventListener('click', (e) => {
+      // Só marca se clicou na imagem, não em marcador
+      if (e.target !== img) return;
+
+      const nome = document.getElementById('nome').value.trim();
+      if (!nome) return alert("Digite seu nome antes!");
+
+      // Remover marcações antigas do jogador
+      const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
+      antigos.forEach(el => el.remove());
+
+      const rect = img.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Criar marcador (bolinha vermelha)
+      const marcador = document.createElement('div');
+      marcador.className = 'marcador';
+      marcador.style.left = (x - 5) + 'px';
+      marcador.style.top = (y - 5) + 'px';
+      marcador.setAttribute('data-nome', nome);
+
+      // Criar rótulo com nome
+      const rotulo = document.createElement('div');
+      rotulo.className = 'rotulo';
+      rotulo.style.left = x + 'px';
+      rotulo.style.top = (y - 20) + 'px';
+      rotulo.textContent = nome;
+      rotulo.setAttribute('data-nome', nome);
+
+      // Ao clicar no marcador, remove ele e o rótulo
+      marcador.addEventListener('click', (event) => {
+        event.stopPropagation(); // evita que o clique no mapa dispare novamente
+        if (confirm(`Quer remover sua marcação, ${nome}?`)) {
+          marcador.remove();
+          rotulo.remove();
+        }
+      });
+
+      mapa.appendChild(marcador);
+      mapa.appendChild(rotulo);
+
+      console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
+    });
+  </script>
+</body>
+</html>
