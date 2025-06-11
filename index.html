@@ -1,22 +1,12 @@
+SE DER MERDA:
+
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mapa de Quedas - Fortnite</title>
   <style>
-    body {
-      text-align: center;
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
-    }
-
-    #mapa {
-      position: relative;
-      display: inline-block;
-      margin-top: 20px;
-    }
-
+    body { text-align: center; font-family: Arial; }
+    #mapa { position: relative; display: inline-block; }
     .marcador {
       position: absolute;
       width: 10px;
@@ -26,7 +16,6 @@
       cursor: pointer;
       pointer-events: auto;
     }
-
     .rotulo {
       position: absolute;
       background: rgba(0,0,0,0.7);
@@ -38,33 +27,26 @@
       white-space: nowrap;
       pointer-events: none;
     }
-
-    input {
-      padding: 5px;
-      font-size: 14px;
-    }
   </style>
-
   <!-- Firebase SDK compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <h2>Escolha onde vai cair no mapa</h2>
-  <p>Seu nome: <input type="text" id="nome" placeholder="Digite seu nome" /></p>
-
+  <p>Seu nome: <input type="text" id="nome" /></p>
   <div id="mapa">
-    <img src="mapa-fortnite.jpg" id="imgMapa" width="800" alt="Mapa do Fortnite">
+    <img src="mapa-fortnite.jpg" id="imgMapa" width="800">
   </div>
 
   <script>
-    // Configuração do Firebase
+    // Configuração do Firebase (coloque a sua config)
     const firebaseConfig = {
       apiKey: "AIzaSyCZ7Is6PrTLYvkld2rRgcUpuLiG1yXOuyU",
       authDomain: "liga-mister-drop-mark.firebaseapp.com",
       databaseURL: "https://liga-mister-drop-mark-default-rtdb.firebaseio.com",
       projectId: "liga-mister-drop-mark",
-      storageBucket: "liga-mister-drop-mark.appspot.com",
+      storageBucket: "liga-mister-drop-mark.firebasestorage.app",
       messagingSenderId: "734895466892",
       appId: "1:734895466892:web:607cac4c40e4f114404ea9"
     };
@@ -76,12 +58,13 @@
     const mapa = document.getElementById('mapa');
     const img = document.getElementById('imgMapa');
 
+    // Função para criar marcador e rótulo no DOM
     function criarMarcador(nome, x, y) {
-      // Remove marcações anteriores com o mesmo nome
+      // Remover marcações antigas do jogador
       const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
       antigos.forEach(el => el.remove());
 
-      // Criar bolinha vermelha
+      // Criar marcador (bolinha vermelha)
       const marcador = document.createElement('div');
       marcador.className = 'marcador';
       marcador.style.left = (x - 5) + 'px';
@@ -96,14 +79,14 @@
       rotulo.textContent = nome;
       rotulo.setAttribute('data-nome', nome);
 
-      // Clique no marcador para excluir
+      // Ao clicar no marcador, remove ele e o rótulo e apaga no Firebase
       marcador.addEventListener('click', (event) => {
-        event.stopPropagation();
+        event.stopPropagation(); 
         if (confirm(`Quer remover sua marcação, ${nome}?`)) {
           marcador.remove();
           rotulo.remove();
-          database.ref('marcadores/' + nome).remove();
-          localStorage.removeItem("marcou_" + nome); // <<< ALTERAÇÃO AQUI
+          // Apagar do Firebase
+          firebase.database().ref('marcadores/' + nome).remove();
         }
       });
 
@@ -111,46 +94,51 @@
       mapa.appendChild(rotulo);
     }
 
-    // Marcar posição no clique do mapa
+    // Quando clicar no mapa para marcar
     mapa.addEventListener('click', (e) => {
       if (e.target !== img) return;
+	
+      // 🔒 Impede marcação se já marcou antes
+    if (localStorage.getItem("ja_marcou") === "true") {
+      return alert("Você já fez sua marcação!");
+    }
 
       const nome = document.getElementById('nome').value.trim();
       if (!nome) return alert("Digite seu nome antes!");
-
-      // Verifica se já marcou
-      if (localStorage.getItem("marcou_" + nome) === "true") {
-        return alert("Você já fez sua marcação!");
-      }
 
       const rect = img.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
+      // Criar marcador localmente
       criarMarcador(nome, x, y);
 
       // Salvar no Firebase
-      database.ref('marcadores/' + nome).set({ x, y });
+      firebase.database().ref('marcadores/' + nome).set({
+        x: x,
+        y: y
+      });
 
-      // Marcar no localStorage por nome
-      localStorage.setItem("marcou_" + nome, "true");
+      localStorage.setItem("ja_marcou", "true");
 
       console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
     });
 
-    // Carregar marcações existentes do Firebase
-    database.ref('marcadores').on('value', (snapshot) => {
+    // Ao carregar a página, ler as marcações do Firebase e mostrar no mapa
+    firebase.database().ref('marcadores').on('value', (snapshot) => {
       const dados = snapshot.val();
       if (!dados) return;
 
-      // Limpa o mapa antes de carregar novas marcações
+      // Limpar todas marcações atuais no DOM
       const marcadoresAtuais = mapa.querySelectorAll('.marcador, .rotulo');
       marcadoresAtuais.forEach(el => el.remove());
 
+      // Criar marcadores para todos os dados salvos
       Object.entries(dados).forEach(([nome, pos]) => {
         criarMarcador(nome, pos.x, pos.y);
       });
     });
+
   </script>
 </body>
 </html>
