@@ -103,7 +103,7 @@
           marcador.remove();
           rotulo.remove();
           database.ref('marcadores/' + nome).remove();
-          localStorage.removeItem("ja_marcou");
+          localStorage.removeItem("marcou_" + nome); // <<< ALTERAÇÃO AQUI
         }
       });
 
@@ -115,12 +115,13 @@
     mapa.addEventListener('click', (e) => {
       if (e.target !== img) return;
 
-      if (localStorage.getItem("ja_marcou") === "true") {
-        return alert("Você já fez sua marcação!");
-      }
-
       const nome = document.getElementById('nome').value.trim();
       if (!nome) return alert("Digite seu nome antes!");
+
+      // Verifica se já marcou
+      if (localStorage.getItem("marcou_" + nome) === "true") {
+        return alert("Você já fez sua marcação!");
+      }
 
       const rect = img.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -131,7 +132,8 @@
       // Salvar no Firebase
       database.ref('marcadores/' + nome).set({ x, y });
 
-      localStorage.setItem("ja_marcou", "true");
+      // Marcar no localStorage por nome
+      localStorage.setItem("marcou_" + nome, "true");
 
       console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
     });
