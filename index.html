@@ -57,7 +57,7 @@
 
     function criarMarcador(nome, x, y) {
       // Remover marcações antigas do jogador
-      const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
+      const antigos = mapa.querySelectorAll([data-nome="${nome}"]);
       antigos.forEach(el => el.remove());
 
       const marcador = document.createElement('div');
@@ -81,7 +81,7 @@
           alert('Você só pode remover sua própria marcação!');
           return;
         }
-        if (confirm(`Quer remover sua marcação, ${nome}?`)) {
+        if (confirm(Quer remover sua marcação, ${nome}?)) {
           marcador.remove();
           rotulo.remove();
           firebase.database().ref('marcadores/' + nome).remove();
@@ -119,7 +119,7 @@
       firebase.database().ref('marcadores/' + nome).set({ x, y });
       localStorage.setItem('nomeMarcacao', nome);
 
-      console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
+      console.log(Jogador ${nome} marcou em: x=${x}, y=${y});
     });
 
     firebase.database().ref('marcadores').on('value', (snapshot) => {
