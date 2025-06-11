@@ -38,7 +38,7 @@
   </div>
 
   <script>
-    // Configuração do Firebase (coloque a sua config)
+    // Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCZ7Is6PrTLYvkld2rRgcUpuLiG1yXOuyU",
       authDomain: "liga-mister-drop-mark.firebaseapp.com",
@@ -49,27 +49,23 @@
       appId: "1:734895466892:web:607cac4c40e4f114404ea9"
     };
 
-    // Inicializar Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
     const mapa = document.getElementById('mapa');
     const img = document.getElementById('imgMapa');
 
-    // Função para criar marcador e rótulo no DOM
     function criarMarcador(nome, x, y) {
       // Remover marcações antigas do jogador
       const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
       antigos.forEach(el => el.remove());
 
-      // Criar marcador (bolinha vermelha)
       const marcador = document.createElement('div');
       marcador.className = 'marcador';
       marcador.style.left = (x - 5) + 'px';
       marcador.style.top = (y - 5) + 'px';
       marcador.setAttribute('data-nome', nome);
 
-      // Criar rótulo com nome
       const rotulo = document.createElement('div');
       rotulo.className = 'rotulo';
       rotulo.style.left = x + 'px';
@@ -77,15 +73,18 @@
       rotulo.textContent = nome;
       rotulo.setAttribute('data-nome', nome);
 
-      // Ao clicar no marcador, remove ele e o rótulo e apaga no Firebase e localStorage
+      // Só pode apagar se for dono da marcação
       marcador.addEventListener('click', (event) => {
         event.stopPropagation();
+        const nomeMarcacaoSalva = localStorage.getItem('nomeMarcacao');
+        if (nomeMarcacaoSalva !== nome) {
+          alert('Você só pode remover sua própria marcação!');
+          return;
+        }
         if (confirm(`Quer remover sua marcação, ${nome}?`)) {
           marcador.remove();
           rotulo.remove();
-          // Apagar do Firebase
           firebase.database().ref('marcadores/' + nome).remove();
-          // Apagar localStorage para liberar nova marcação
           localStorage.removeItem('nomeMarcacao');
         }
       });
@@ -94,23 +93,18 @@
       mapa.appendChild(rotulo);
     }
 
-    // Quando clicar no mapa para marcar
     mapa.addEventListener('click', async (e) => {
       if (e.target !== img) return;
 
       const nome = document.getElementById('nome').value.trim();
       if (!nome) return alert("Digite seu nome antes!");
 
-      // Verifica se já existe uma marcação no localStorage (qualquer nome)
       const nomeMarcacaoSalva = localStorage.getItem('nomeMarcacao');
-
-      // Se já tiver uma marcação com nome diferente, bloqueia criação
       if (nomeMarcacaoSalva && nomeMarcacaoSalva !== nome) {
         alert('Você já fez uma marcação com outro nome. Para criar uma nova, apague a marcação atual.');
         return;
       }
 
-      // Verificar se já existe essa marcação no Firebase (pode ser redundante)
       const snapshot = await firebase.database().ref('marcadores/' + nome).get();
       if (snapshot.exists()) {
         alert('Você já tem uma marcação no mapa. Remova ela para criar uma nova.');
@@ -121,36 +115,24 @@
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      // Criar marcador localmente
       criarMarcador(nome, x, y);
-
-      // Salvar no Firebase
-      firebase.database().ref('marcadores/' + nome).set({
-        x: x,
-        y: y
-      });
-
-      // Salvar no localStorage o nome da marcação atual
+      firebase.database().ref('marcadores/' + nome).set({ x, y });
       localStorage.setItem('nomeMarcacao', nome);
 
       console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
     });
 
-    // Ao carregar a página, ler as marcações do Firebase e mostrar no mapa
     firebase.database().ref('marcadores').on('value', (snapshot) => {
       const dados = snapshot.val();
       if (!dados) return;
 
-      // Limpar todas marcações atuais no DOM
       const marcadoresAtuais = mapa.querySelectorAll('.marcador, .rotulo');
       marcadoresAtuais.forEach(el => el.remove());
 
-      // Criar marcadores para todos os dados salvos
       Object.entries(dados).forEach(([nome, pos]) => {
         criarMarcador(nome, pos.x, pos.y);
       });
     });
-
   </script>
 </body>
 </html>
