@@ -98,11 +98,6 @@ SE DER MERDA:
     mapa.addEventListener('click', (e) => {
       if (e.target !== img) return;
 	
-      // 🔒 Impede marcação se já marcou antes
-    if (localStorage.getItem("ja_marcou") === "true") {
-      return alert("Você já fez sua marcação!");
-    }
-
       const nome = document.getElementById('nome').value.trim();
       if (!nome) return alert("Digite seu nome antes!");
 
@@ -118,8 +113,6 @@ SE DER MERDA:
         x: x,
         y: y
       });
-
-      localStorage.setItem("ja_marcou", "true");
 
       console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
     });
