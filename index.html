@@ -38,115 +38,101 @@
   </div>
 
   <script>
-  // Gera token simples UUID v4
-  function gerarToken() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZ7Is6PrTLYvkld2rRgcUpuLiG1yXOuyU",
+      authDomain: "liga-mister-drop-mark.firebaseapp.com",
+      databaseURL: "https://liga-mister-drop-mark-default-rtdb.firebaseio.com",
+      projectId: "liga-mister-drop-mark",
+      storageBucket: "liga-mister-drop-mark.firebasestorage.app",
+      messagingSenderId: "734895466892",
+      appId: "1:734895466892:web:607cac4c40e4f114404ea9"
+    };
 
-  // Pega token do localStorage ou gera um novo
-  let token = localStorage.getItem('usuarioToken');
-  if (!token) {
-    token = gerarToken();
-    localStorage.setItem('usuarioToken', token);
-  }
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-  const mapa = document.getElementById('mapa');
-  const img = document.getElementById('imgMapa');
+    const mapa = document.getElementById('mapa');
+    const img = document.getElementById('imgMapa');
 
-  function criarMarcador(nome, x, y) {
-    // Remover marcações antigas do jogador
-    const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
-    antigos.forEach(el => el.remove());
+    function criarMarcador(nome, x, y) {
+      // Remover marcações antigas do jogador
+      const antigos = mapa.querySelectorAll(`[data-nome="${nome}"]`);
+      antigos.forEach(el => el.remove());
 
-    const marcador = document.createElement('div');
-    marcador.className = 'marcador';
-    marcador.style.left = (x - 5) + 'px';
-    marcador.style.top = (y - 5) + 'px';
-    marcador.setAttribute('data-nome', nome);
+      const marcador = document.createElement('div');
+      marcador.className = 'marcador';
+      marcador.style.left = (x - 5) + 'px';
+      marcador.style.top = (y - 5) + 'px';
+      marcador.setAttribute('data-nome', nome);
 
-    const rotulo = document.createElement('div');
-    rotulo.className = 'rotulo';
-    rotulo.style.left = x + 'px';
-    rotulo.style.top = (y - 20) + 'px';
-    rotulo.textContent = nome;
-    rotulo.setAttribute('data-nome', nome);
+      const rotulo = document.createElement('div');
+      rotulo.className = 'rotulo';
+      rotulo.style.left = x + 'px';
+      rotulo.style.top = (y - 20) + 'px';
+      rotulo.textContent = nome;
+      rotulo.setAttribute('data-nome', nome);
 
-    // Apagar só se token local bater com token salvo
-    marcador.addEventListener('click', async (event) => {
-      event.stopPropagation();
+      // Só pode apagar se for dono da marcação
+      marcador.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const nomeMarcacaoSalva = localStorage.getItem('nomeMarcacao');
+        if (nomeMarcacaoSalva !== nome) {
+          alert('Você só pode remover sua própria marcação!');
+          return;
+        }
+        if (confirm(`Quer remover sua marcação, ${nome}?`)) {
+          marcador.remove();
+          rotulo.remove();
+          firebase.database().ref('marcadores/' + nome).remove();
+          localStorage.removeItem('nomeMarcacao');
+        }
+      });
+
+      mapa.appendChild(marcador);
+      mapa.appendChild(rotulo);
+    }
+
+    mapa.addEventListener('click', async (e) => {
+      if (e.target !== img) return;
+
+      const nome = document.getElementById('nome').value.trim();
+      if (!nome) return alert("Digite seu nome antes!");
+
       const nomeMarcacaoSalva = localStorage.getItem('nomeMarcacao');
-      if (nomeMarcacaoSalva !== nome) {
-        alert('Você só pode remover sua própria marcação!');
+      if (nomeMarcacaoSalva && nomeMarcacaoSalva !== nome) {
+        alert('Você já fez uma marcação com outro nome. Para criar uma nova, apague a marcação atual.');
         return;
       }
-      if (confirm(`Quer remover sua marcação, ${nome}?`)) {
-        // Pega token do banco para comparação
-        const ref = firebase.database().ref('marcadores/' + nome);
-        const snapshot = await ref.get();
-        if (!snapshot.exists()) {
-          alert('Marcaçao já removida.');
-          return;
-        }
-        const dado = snapshot.val();
-        if (dado.token !== token) {
-          alert('Token inválido. Não é possível remover.');
-          return;
-        }
-        await ref.remove();
-        marcador.remove();
-        rotulo.remove();
-        localStorage.removeItem('nomeMarcacao');
+
+      const snapshot = await firebase.database().ref('marcadores/' + nome).get();
+      if (snapshot.exists()) {
+        alert('Você já tem uma marcação no mapa. Remova ela para criar uma nova.');
+        return;
       }
+
+      const rect = img.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      criarMarcador(nome, x, y);
+      firebase.database().ref('marcadores/' + nome).set({ x, y });
+      localStorage.setItem('nomeMarcacao', nome);
+
+      console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}`);
     });
 
-    mapa.appendChild(marcador);
-    mapa.appendChild(rotulo);
-  }
+    firebase.database().ref('marcadores').on('value', (snapshot) => {
+      const dados = snapshot.val();
+      if (!dados) return;
 
-  mapa.addEventListener('click', async (e) => {
-    if (e.target !== img) return;
+      const marcadoresAtuais = mapa.querySelectorAll('.marcador, .rotulo');
+      marcadoresAtuais.forEach(el => el.remove());
 
-    const nome = document.getElementById('nome').value.trim();
-    if (!nome) return alert("Digite seu nome antes!");
-
-    const nomeMarcacaoSalva = localStorage.getItem('nomeMarcacao');
-    if (nomeMarcacaoSalva && nomeMarcacaoSalva !== nome) {
-      alert('Você já fez uma marcação com outro nome. Para criar uma nova, apague a marcação atual.');
-      return;
-    }
-
-    const snapshot = await firebase.database().ref('marcadores/' + nome).get();
-    if (snapshot.exists()) {
-      alert('Você já tem uma marcação no mapa. Remova ela para criar uma nova.');
-      return;
-    }
-
-    const rect = img.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    criarMarcador(nome, x, y);
-    // Salva token junto com x e y
-    firebase.database().ref('marcadores/' + nome).set({ x, y, token });
-    localStorage.setItem('nomeMarcacao', nome);
-
-    console.log(`Jogador ${nome} marcou em: x=${x}, y=${y}, token=${token}`);
-  });
-
-  firebase.database().ref('marcadores').on('value', (snapshot) => {
-    const dados = snapshot.val();
-    if (!dados) return;
-
-    const marcadoresAtuais = mapa.querySelectorAll('.marcador, .rotulo');
-    marcadoresAtuais.forEach(el => el.remove());
-
-    Object.entries(dados).forEach(([nome, pos]) => {
-      criarMarcador(nome, pos.x, pos.y);
+      Object.entries(dados).forEach(([nome, pos]) => {
+        criarMarcador(nome, pos.x, pos.y);
+      });
     });
-  });
-</script>
+  </script>
 </body>
 </html>
